@@ -77,36 +77,6 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
     source testenv/bin/activate
 fi
 
-### PyPy nightly (currently on Travis) ###
-
-if [ "$PYPY_NIGHTLY_BRANCH" != "" ]; then
-    JOB_NAME="pypy_nightly_${PYPY_NIGHTLY_BRANCH}"
-    curl-harder -o pypy.tar.bz2 http://buildbot.pypy.org/nightly/${PYPY_NIGHTLY_BRANCH}/pypy-c-jit-latest-linux64.tar.bz2
-    if [ ! -s pypy.tar.bz2 ]; then
-        # We know:
-        # - curl succeeded (200 response code)
-        # - nonetheless, pypy.tar.bz2 does not exist, or contains no data
-        # This isn't going to work, and the failure is not informative of
-        # anything involving Trio.
-        ls -l
-        echo "PyPy3 nightly build failed to download – something is wrong on their end."
-        echo "Skipping testing against the nightly build for right now."
-        exit 0
-    fi
-    tar xaf pypy.tar.bz2
-    # something like "pypy-c-jit-89963-748aa3022295-linux64"
-    PYPY_DIR=$(echo pypy-c-jit-*)
-    PYTHON_EXE=$PYPY_DIR/bin/pypy3
-
-    if ! ($PYTHON_EXE -m ensurepip \
-              && $PYTHON_EXE -m pip install virtualenv \
-              && $PYTHON_EXE -m virtualenv testenv); then
-        echo "pypy nightly is broken; skipping tests"
-        exit 0
-    fi
-    source testenv/bin/activate
-fi
-
 ### Qemu virtual-machine inception, on Travis
 
 if [ "$VM_IMAGE" != "" ]; then
@@ -210,6 +180,7 @@ fi
 # We have a Python environment!
 ################################################################
 
+python -V
 python -c "import sys, struct, ssl; print('#' * 70); print('python:', sys.version); print('version_info:', sys.version_info); print('bits:', struct.calcsize('P') * 8); print('openssl:', ssl.OPENSSL_VERSION, ssl.OPENSSL_VERSION_INFO); print('#' * 70)"
 
 python -m pip install -U pip setuptools wheel
@@ -267,26 +238,17 @@ else
         netsh winsock reset
     fi
 
-    # coverage is broken in pypy3 7.1.1, but is fixed in nightly and should be
-    # fixed in the next release after 7.1.1.
-    # See: https://bitbucket.org/pypy/pypy/issues/2943/
-    if [[ "$TRAVIS_PYTHON_VERSION" = "pypy3" ]]; then
-        true;
-    else
-        # Flag pypy and cpython coverage differently, until it settles down...
-        FLAG="cpython"
-        if [[ "$PYPY_NIGHTLY_BRANCH" == "py3.6" ]]; then
-            FLAG="pypy36nightly"
-        elif [[ "$(python -V)" == *PyPy* ]]; then
-            FLAG="pypy36release"
-        fi
-        # It's more common to do
-        #   bash <(curl ...)
-        # but azure is broken:
-        #   https://developercommunity.visualstudio.com/content/problem/743824/bash-task-on-windows-suddenly-fails-with-bash-devf.html
-        curl-harder -o codecov.sh https://codecov.io/bash
-        bash codecov.sh -n "${JOB_NAME}" -F "$FLAG"
+    # Flag pypy and cpython coverage differently, until it settles down...
+    FLAG="cpython"
+    if [[ "$(python -V)" == *PyPy* ]]; then
+        FLAG="pypy36release"
     fi
+    # It's more common to do
+    #   bash <(curl ...)
+    # but azure is broken:
+    #   https://developercommunity.visualstudio.com/content/problem/743824/bash-task-on-windows-suddenly-fails-with-bash-devf.html
+    curl-harder -o codecov.sh https://codecov.io/bash
+    bash codecov.sh -n "${JOB_NAME}" -F "$FLAG"
 
     $PASSED
 fi
