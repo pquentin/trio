@@ -272,7 +272,7 @@ else
     # but azure is broken:
     #   https://developercommunity.visualstudio.com/content/problem/743824/bash-task-on-windows-suddenly-fails-with-bash-devf.html
     curl-harder -o codecov.sh https://codecov.io/bash
-    bash codecov.sh -n "${JOB_NAME}"
+    bash -x codecov.sh -n "${JOB_NAME}"
 
     $PASSED
 fi
