@@ -10,7 +10,7 @@ async-generator==1.10
 attrs==19.3.0
 backcall==0.1.0           # via ipython
 cffi==1.13.2
-coverage==5.0.3           # via pytest-cov
+git+https://github.com/nedbat/coveragepy.git@a6097893ac54e6332a7c7b4b3667fc3064d9fb1b
 cryptography==2.8         # via pyopenssl, trustme
 decorator==4.4.1          # via ipython, traitlets
 entrypoints==0.3          # via flake8
