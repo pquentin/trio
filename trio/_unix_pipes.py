@@ -13,33 +13,6 @@ if os.name != "posix":
 DEFAULT_RECEIVE_SIZE = 65536
 
 
-class ConflictDetector:
-    """Detect when two tasks are about to perform operations that would
-    conflict.
-
-    Use as a synchronous context manager; if two tasks enter it at the same
-    time then the second one raises an error. You can use it when there are
-    two pieces of code that *would* collide and need a lock if they ever were
-    called at the same time, but that should never happen.
-
-    We use this in particular for things like, making sure that two different
-    tasks don't call sendall simultaneously on the same stream.
-
-    """
-    def __init__(self, msg):
-        self._msg = msg
-        self._held = False
-
-    def __enter__(self):
-        if self._held:
-            raise trio.BusyResourceError(self._msg)
-        else:
-            self._held = True
-
-    def __exit__(self, *args):
-        self._held = False
-
-
 class _FdHolder:
     # This class holds onto a raw file descriptor, in non-blocking mode, and
     # is responsible for managing its lifecycle. In particular, it's
@@ -118,37 +91,30 @@ class FdStream():
     """
     def __init__(self, fd: int):
         self._fd_holder = _FdHolder(fd)
-        self._send_conflict_detector = ConflictDetector(
-            "another task is using this stream for send"
-        )
-        self._receive_conflict_detector = ConflictDetector(
-            "another task is using this stream for receive"
-        )
 
     async def receive_some(self, max_bytes=None) -> bytes:
-        with self._receive_conflict_detector:
-            if max_bytes is None:
-                max_bytes = DEFAULT_RECEIVE_SIZE
-            else:
-                if not isinstance(max_bytes, int):
-                    raise TypeError("max_bytes must be integer >= 1")
-                if max_bytes < 1:
-                    raise ValueError("max_bytes must be integer >= 1")
+        if max_bytes is None:
+            max_bytes = DEFAULT_RECEIVE_SIZE
+        else:
+            if not isinstance(max_bytes, int):
+                raise TypeError("max_bytes must be integer >= 1")
+            if max_bytes < 1:
+                raise ValueError("max_bytes must be integer >= 1")
 
-            await trio.hazmat.checkpoint()
-            while True:
-                try:
-                    data = os.read(self._fd_holder.fd, max_bytes)
-                except BlockingIOError:
-                    await trio.hazmat.wait_readable(self._fd_holder.fd)
-                except OSError as e:
-                    if e.errno == errno.EBADF:
-                        raise trio.ClosedResourceError(
-                            "file was already closed"
-                        ) from None
-                    else:
-                        raise trio.BrokenResourceError from e
+        await trio.hazmat.checkpoint()
+        while True:
+            try:
+                data = os.read(self._fd_holder.fd, max_bytes)
+            except BlockingIOError:
+                await trio.hazmat.wait_readable(self._fd_holder.fd)
+            except OSError as e:
+                if e.errno == errno.EBADF:
+                    raise trio.ClosedResourceError(
+                        "file was already closed"
+                    ) from None
                 else:
-                    break
+                    raise trio.BrokenResourceError from e
+            else:
+                break
 
-            return data
+        return data
