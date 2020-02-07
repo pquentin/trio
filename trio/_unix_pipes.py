@@ -88,9 +88,6 @@ class _FdHolder:
         os.set_blocking(fd, self._original_is_blocking)
         os.close(fd)
 
-    def __del__(self):
-        self._raw_close()
-
     async def aclose(self):
         if not self.closed:
             trio.hazmat.notify_closing(self.fd)
