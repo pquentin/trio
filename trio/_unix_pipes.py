@@ -69,10 +69,6 @@ class _FdHolder:
         self._original_is_blocking = os.get_blocking(fd)
         os.set_blocking(fd, False)
 
-    @property
-    def closed(self):
-        return self.fd == -1
-
     def _raw_close(self):
         # This doesn't assume it's in a Trio context, so it can be called from
         # __del__. You should never call it from Trio context, because it
@@ -81,18 +77,12 @@ class _FdHolder:
         # waiting on this fd, and those tasks hold a reference to this object.
         # So if __del__ is being called, we know there aren't any tasks that
         # need to be woken.
-        if self.closed:
+        if self.fd == -1:
             return
         fd = self.fd
         self.fd = -1
         os.set_blocking(fd, self._original_is_blocking)
         os.close(fd)
-
-    async def aclose(self):
-        if not self.closed:
-            trio.hazmat.notify_closing(self.fd)
-            self._raw_close()
-        await trio.hazmat.checkpoint()
 
 
 class FdStream():
@@ -135,42 +125,6 @@ class FdStream():
             "another task is using this stream for receive"
         )
 
-    async def send_all(self, data: bytes):
-        with self._send_conflict_detector:
-            # have to check up front, because send_all(b"") on a closed pipe
-            # should raise
-            if self._fd_holder.closed:
-                raise trio.ClosedResourceError("file was already closed")
-            await trio.hazmat.checkpoint()
-            length = len(data)
-            # adapted from the SocketStream code
-            with memoryview(data) as view:
-                sent = 0
-                while sent < length:
-                    with view[sent:] as remaining:
-                        try:
-                            sent += os.write(self._fd_holder.fd, remaining)
-                        except BlockingIOError:
-                            await trio.hazmat.wait_writable(self._fd_holder.fd)
-                        except OSError as e:
-                            if e.errno == errno.EBADF:
-                                raise trio.ClosedResourceError(
-                                    "file was already closed"
-                                ) from None
-                            else:
-                                raise trio.BrokenResourceError from e
-
-    async def wait_send_all_might_not_block(self) -> None:
-        with self._send_conflict_detector:
-            if self._fd_holder.closed:
-                raise trio.ClosedResourceError("file was already closed")
-            try:
-                await trio.hazmat.wait_writable(self._fd_holder.fd)
-            except BrokenPipeError as e:
-                # kqueue: raises EPIPE on wait_writable instead
-                # of sending, which is annoying
-                raise trio.BrokenResourceError from e
-
     async def receive_some(self, max_bytes=None) -> bytes:
         with self._receive_conflict_detector:
             if max_bytes is None:
@@ -198,9 +152,3 @@ class FdStream():
                     break
 
             return data
-
-    async def aclose(self):
-        await self._fd_holder.aclose()
-
-    def fileno(self):
-        return self._fd_holder.fd
