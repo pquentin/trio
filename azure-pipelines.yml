@@ -1,9 +1,3 @@
-# Will want to adjust this if we ever start having non-master branches
-# in the main repo:
-#   https://docs.microsoft.com/en-us/azure/devops/pipelines/build/triggers
-trigger:
-  - master
-
 jobs:
 
 - job: 'Windows'
