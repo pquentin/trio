@@ -100,21 +100,3 @@ class FdStream():
                 raise TypeError("max_bytes must be integer >= 1")
             if max_bytes < 1:
                 raise ValueError("max_bytes must be integer >= 1")
-
-        await trio.hazmat.checkpoint()
-        while True:
-            try:
-                data = os.read(self._fd_holder.fd, max_bytes)
-            except BlockingIOError:
-                await trio.hazmat.wait_readable(self._fd_holder.fd)
-            except OSError as e:
-                if e.errno == errno.EBADF:
-                    raise trio.ClosedResourceError(
-                        "file was already closed"
-                    ) from None
-                else:
-                    raise trio.BrokenResourceError from e
-            else:
-                break
-
-        return data
