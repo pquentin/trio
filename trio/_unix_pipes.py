@@ -91,12 +91,3 @@ class FdStream():
     """
     def __init__(self, fd: int):
         self._fd_holder = _FdHolder(fd)
-
-    async def receive_some(self, max_bytes=None) -> bytes:
-        if max_bytes is None:
-            max_bytes = DEFAULT_RECEIVE_SIZE
-        else:
-            if not isinstance(max_bytes, int):
-                raise TypeError("max_bytes must be integer >= 1")
-            if max_bytes < 1:
-                raise ValueError("max_bytes must be integer >= 1")
