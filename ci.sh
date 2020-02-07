@@ -14,27 +14,10 @@ python -c "import sys, struct, ssl, sqlite3; print('#' * 70); print('python:', s
 python -m pip install -U pip setuptools wheel
 python -m pip --version
 
-python setup.py sdist --formats=zip
-python -m pip install dist/*.zip
+# python setup.py sdist --formats=zip
+# python -m pip install dist/*.zip
 
 # Actual tests
-python -m pip install -r test-requirements.txt
+python -m pip install coverage==5.0.3 pytest-cov==2.8.1 pytest==5.3.5
 
-mkdir empty
-cd empty
-
-INSTALLDIR=$(python -c "import os, trio; print(os.path.dirname(trio.__file__))")
-cp ../setup.cfg $INSTALLDIR
-if pytest -W error -r a --junitxml=../test-results.xml --run-slow ${INSTALLDIR} --cov="$INSTALLDIR" --cov-config=../.coveragerc --verbose; then
-    PASSED=true
-else
-    PASSED=false
-fi
-
-# Remove the LSP again; again we want to do this ASAP to avoid
-# accidentally breaking other stuff.
-if [ "$LSP" != "" ]; then
-    netsh winsock reset
-fi
-
-$PASSED
+pytest -W error -r a repro --cov=repro --cov-config=.coveragerc --verbose
