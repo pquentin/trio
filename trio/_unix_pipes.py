@@ -1,9 +1,6 @@
 import os
 import errno
 
-from ._abc import Stream
-from ._util import ConflictDetector
-
 import trio
 
 if os.name != "posix":
@@ -14,6 +11,33 @@ if os.name != "posix":
 # XX TODO: is this a good number? who knows... it does match the default Linux
 # pipe capacity though.
 DEFAULT_RECEIVE_SIZE = 65536
+
+
+class ConflictDetector:
+    """Detect when two tasks are about to perform operations that would
+    conflict.
+
+    Use as a synchronous context manager; if two tasks enter it at the same
+    time then the second one raises an error. You can use it when there are
+    two pieces of code that *would* collide and need a lock if they ever were
+    called at the same time, but that should never happen.
+
+    We use this in particular for things like, making sure that two different
+    tasks don't call sendall simultaneously on the same stream.
+
+    """
+    def __init__(self, msg):
+        self._msg = msg
+        self._held = False
+
+    def __enter__(self):
+        if self._held:
+            raise trio.BusyResourceError(self._msg)
+        else:
+            self._held = True
+
+    def __exit__(self, *args):
+        self._held = False
 
 
 class _FdHolder:
@@ -74,7 +98,7 @@ class _FdHolder:
         await trio.hazmat.checkpoint()
 
 
-class FdStream(Stream):
+class FdStream():
     """
     Represents a stream given the file descriptor to a pipe, TTY, etc.
 
