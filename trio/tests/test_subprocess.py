@@ -455,6 +455,7 @@ async def test_custom_deliver_cancel():
     assert custom_deliver_cancel_called
 
 
+@pytest.mark.timeout(method="signal", timeout=1)
 async def test_warn_on_failed_cancel_terminate(monkeypatch):
     original_terminate = Process.terminate
 
