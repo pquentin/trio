@@ -7,7 +7,7 @@ import warnings
 
 from ._abc import AsyncResource, SendStream, ReceiveStream
 from ._highlevel_generic import StapledStream
-from ._sync import Lock
+from ._sync import Event, Lock
 from ._subprocess_platform import (
     wait_child_exiting,
     create_pipe_to_child_stdin,
@@ -104,7 +104,7 @@ class Process(AsyncResource, metaclass=NoPublicConstructor):
     # Available for the per-platform wait_child_exiting() implementations
     # to stash some state; waitid platforms use this to avoid spawning
     # arbitrarily many threads if wait() keeps getting cancelled.
-    _wait_for_exit_data = None
+    _wait_for_exit_data: Optional[Event] = None
 
     def __init__(self, popen, stdin, stdout, stderr):
         self._proc = popen
@@ -377,7 +377,9 @@ async def open_process(
         if trio_stderr is not None:
             os.close(stderr)
 
-    return Process._create(popen, trio_stdin, trio_stdout, trio_stderr)
+    return Process._create(  # type: ignore[no-any-return]
+        popen, trio_stdin, trio_stdout, trio_stderr
+    )
 
 
 async def _windows_deliver_cancel(p):

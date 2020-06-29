@@ -1,5 +1,8 @@
 import select
+import sys
 from .. import _core, _subprocess
+
+assert sys.platform != "linux" and sys.platform != "win32"
 
 
 async def wait_child_exiting(process: "_subprocess.Process") -> None:

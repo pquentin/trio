@@ -24,7 +24,7 @@ posix = os.name == "posix"
 if posix:
     from signal import SIGKILL, SIGTERM, SIGUSR1
 else:
-    SIGKILL, SIGTERM, SIGUSR1 = None, None, None
+    SIGKILL, SIGTERM, SIGUSR1 = None, None, None  # type: ignore
 
 
 # Since Windows has very few command-line utilities generally available,
