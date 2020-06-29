@@ -88,6 +88,7 @@ from ._highlevel_ssl_helpers import (
     serve_ssl_over_tcp,
 )
 
+from . import _deprecate
 from ._deprecate import TrioDeprecationWarning
 
 # Submodules imported by default
