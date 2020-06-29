@@ -1,13 +1,13 @@
 import errno
 import select
 import os
-import tempfile
 import sys
+from typing import Tuple
 
 import pytest
 
 from .._core.tests.tutil import gc_collect_harder, skip_if_fbsd_pipes_broken
-from .. import _core, move_on_after
+from .. import _core
 from ..testing import wait_all_tasks_blocked, check_one_way_stream
 
 posix = os.name == "posix"
@@ -20,7 +20,7 @@ else:
 
 
 # Have to use quoted types so import doesn't crash on windows
-async def make_pipe() -> "Tuple[FdStream, FdStream]":
+async def make_pipe() -> Tuple[FdStream, FdStream]:
     """Makes a new pair of pipes."""
     (r, w) = os.pipe()
     return FdStream(w), FdStream(r)

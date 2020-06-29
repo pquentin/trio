@@ -1,7 +1,11 @@
+import sys
 from . import _core
 from ._abc import SendStream, ReceiveStream
 from ._util import ConflictDetector, Final
-from ._core._windows_cffi import _handle, raise_winerror, kernel32, ffi
+from ._core._windows_cffi import _handle, raise_winerror, kernel32
+
+assert sys.platform == "win32"
+
 
 # XX TODO: don't just make this up based on nothing.
 DEFAULT_RECEIVE_SIZE = 65536
