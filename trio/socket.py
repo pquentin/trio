@@ -21,7 +21,7 @@ import sys as _sys
 # kept up to date.
 try:
     # fmt: off
-    from socket import (
+    from socket import (  # type: ignore
         CMSG_LEN, CMSG_SPACE, CAPI, AF_UNSPEC, AF_INET, AF_UNIX, AF_IPX,
         AF_APPLETALK, AF_INET6, AF_ROUTE, AF_LINK, AF_SNA, PF_SYSTEM,
         AF_SYSTEM, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_RDM,
@@ -136,7 +136,7 @@ if _sys.platform == "win32":
 globals().update(
     {
         _name: getattr(_stdlib_socket, _name)
-        for _name in _stdlib_socket.__all__
+        for _name in _stdlib_socket.__all__  # type: ignore
         if _name.isupper() and _name not in _bad_symbols
     }
 )
